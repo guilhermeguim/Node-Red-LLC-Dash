@@ -1,0 +1,1946 @@
+﻿[
+    {
+        "id": "b13dc9c6b0ef4a6f",
+        "type": "tab",
+        "label": "Vacuum LLC-05",
+        "disabled": false,
+        "info": "",
+        "env": []
+    },
+    {
+        "id": "84c4316e232752da",
+        "type": "s7 in",
+        "z": "b13dc9c6b0ef4a6f",
+        "endpoint": "96de35ae7ee1a0fc",
+        "mode": "all",
+        "variable": "VACUO_TEMPO",
+        "diff": false,
+        "name": "",
+        "x": 405,
+        "y": 600,
+        "wires": [
+            [
+                "794059e82425381c",
+                "702fb0d9214861cd",
+                "25aa96217a0b59bd",
+                "4014d056ef29a26e"
+            ]
+        ],
+        "l": false
+    },
+    {
+        "id": "9161262830bb4f5e",
+        "type": "mysql",
+        "z": "b13dc9c6b0ef4a6f",
+        "mydb": "a14878b16f086ba1",
+        "name": "",
+        "x": 2030,
+        "y": 500,
+        "wires": [
+            [
+                "8b3ea5c89877ade0"
+            ]
+        ]
+    },
+    {
+        "id": "bcc3602fcbb42aad",
+        "type": "mysql",
+        "z": "b13dc9c6b0ef4a6f",
+        "mydb": "a14878b16f086ba1",
+        "name": "",
+        "x": 2030,
+        "y": 540,
+        "wires": [
+            [
+                "dd4b3f8be484a24d"
+            ]
+        ]
+    },
+    {
+        "id": "702fb0d9214861cd",
+        "type": "function",
+        "z": "b13dc9c6b0ef4a6f",
+        "name": "Set Side and State",
+        "func": "var currentState = msg.payload.LLC_VACUUM_ON;\n\nvar previousState = flow.get(\"previousState\");\n\n// Inicialização, não houve estado anterior\nif (previousState === undefined) {\n    flow.set(\"previousState\", currentState);\n    msg.state = \"not changed\";\n    msg.isActive = false;\n} \n\n// Verifica o lado atual ativado\nif (currentState == true) {\n    msg.isActive = true;\n} else {\n    msg.isActive = false;\n}\n\n// Verifica se houve mudança no estado, ativou ou desativou\nif (currentState !== previousState) {\n    msg.state = currentState ? \"activated\" : \"deactivated\";\n} else {\n    msg.state = \"not changed\";\n}\n\nflow.set(\"previousState\", currentState);\n\n\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 570,
+        "y": 600,
+        "wires": [
+            [
+                "b999d76c07c60609"
+            ]
+        ]
+    },
+    {
+        "id": "b999d76c07c60609",
+        "type": "function",
+        "z": "b13dc9c6b0ef4a6f",
+        "name": "Set Process Variable",
+        "func": "switch (msg.isActive) {\n    case true:\n        flow.set(\"VIN\", msg.payload.LLC_VIN);\n        flow.set(\"SEQ\", msg.payload.LLC_SEQ);\n        flow.set(\"LLC_NG\", msg.payload.LLC_VACUUM_NG);\n        flow.set(\"LLC_OK\", msg.payload.LLC_VACUUM_OK);\n        return msg;\n    default:\n        flow.set(\"LLC_NG\", msg.payload.LLC_VACUUM_NG);\n        flow.set(\"LLC_OK\", msg.payload.LLC_VACUUM_OK);\n        //console.log(\"Invalid Expression\");\n        return msg;\n}",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 760,
+        "y": 560,
+        "wires": [
+            [
+                "3da3bf3e2ed1583a"
+            ]
+        ]
+    },
+    {
+        "id": "3da3bf3e2ed1583a",
+        "type": "function",
+        "z": "b13dc9c6b0ef4a6f",
+        "name": "Set Times",
+        "func": "\nvar time = getDateTime();\n\ntestState(msg.state, time);\n\nflow.set(\"current_time\", time);\n\nfunction testState(state, time) {\n    if (state == \"deactivated\") {\n        msg.activate_time = flow.get(\"activate_time\");\n        msg.deactivate_time = time;\n    } else if (state == \"activated\") {\n        flow.set(\"activate_time\", time);\n    }\n}\n\nfunction getDateTime(){\n    var dataHoraLocal = new Date();\n    //Define o fuso horário para o Horário de Brasília (BRT - UTC-3)\n    dataHoraLocal.setUTCHours(dataHoraLocal.getUTCHours() - 3);\n    //Formata a data e hora no formato desejado (por exemplo, 'YYYY-MM-DD HH:mm:ss')\n    var dataHoraFormatada = dataHoraLocal.toISOString().slice(0, 19).replace('T', ' ');\n    return dataHoraFormatada;\n}\n\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 920,
+        "y": 600,
+        "wires": [
+            [
+                "478e313582544b70"
+            ]
+        ]
+    },
+    {
+        "id": "478e313582544b70",
+        "type": "function",
+        "z": "b13dc9c6b0ef4a6f",
+        "name": "Set Counter",
+        "func": "var counter = flow.get(\"counter\");\n\n//Inicialização\nif (counter === undefined) {\n    flow.set(\"counter\", 0);\n}else{\n    if (msg.state == \"deactivated\") {\n        flow.set(\"counter\", 0);\n    }else if (msg.isActive == false){\n        flow.set(\"counter\", 0);\n    } else if (msg.state == \"activated\") {\n        flow.set(\"counter\", 0);\n    }else{\n        counter = counter + 1;\n        flow.set(\"counter\", counter);\n    }\n}\n\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1050,
+        "y": 560,
+        "wires": [
+            [
+                "bde567d39af81cee"
+            ]
+        ]
+    },
+    {
+        "id": "bde567d39af81cee",
+        "type": "function",
+        "z": "b13dc9c6b0ef4a6f",
+        "name": "Set Group ID",
+        "func": "var groupID = flow.get(\"groupID\");\n\n//Inicialização\nif (groupID === undefined) {\n    flow.set(\"groupID\", 0);\n} \n\nif (msg.state == \"activated\") {\n    groupID = flow.get(\"groupID\");\n    groupID = groupID + 1;\n    flow.set(\"groupID\", groupID);\n}\n\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1190,
+        "y": 600,
+        "wires": [
+            [
+                "eb4c3f6b0505f31d"
+            ]
+        ]
+    },
+    {
+        "id": "eb4c3f6b0505f31d",
+        "type": "function",
+        "z": "b13dc9c6b0ef4a6f",
+        "name": "Join Variables",
+        "func": "if (msg.state == \"deactivated\"){\n    msg.vin = flow.get(\"VIN\");\n    msg.seq = flow.get(\"SEQ\");\n    msg.llc_ng = flow.get(\"LLC_NG\") ? 1 : 0;\n    msg.llc_ok = flow.get(\"LLC_OK\") ? 1 : 0;\n    msg.end_value = msg.payload.LLC_END_VALUE;\n}\n\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1340,
+        "y": 560,
+        "wires": [
+            [
+                "2ccef9d84b04aa9b",
+                "381a217fca3a2dc7",
+                "56e90166cf48500a",
+                "9782ed0a1e38a45d"
+            ]
+        ]
+    },
+    {
+        "id": "0b477167ab2f5dd9",
+        "type": "function",
+        "z": "b13dc9c6b0ef4a6f",
+        "name": "Prepare Event Query",
+        "func": "var groupID = flow.get(\"groupID\");\nmsg.end_value = flow.get(\"endValueUpdated\");\n\nif (msg.state == \"deactivated\") {\n    msg.topic = \"INSERT INTO filling_events_llc (GROUP_ID, START_TIME, END_TIME, SEQ, VIN, LLC_OK, LLC_NG, END_VALUE) VALUES ('\" + groupID + \"', '\" + msg.activate_time + \"', '\" + msg.deactivate_time + \"', \" + msg.seq + \", '\" + msg.vin + \"', \" + msg.llc_ok + \", \" + msg.llc_ng + \", \" + msg.end_value + \")\";\n    flow.set(\"groupID\", groupID);\n    return msg;\n}\n",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1840,
+        "y": 500,
+        "wires": [
+            [
+                "25f303b21c414118",
+                "9161262830bb4f5e"
+            ]
+        ]
+    },
+    {
+        "id": "2ccef9d84b04aa9b",
+        "type": "function",
+        "z": "b13dc9c6b0ef4a6f",
+        "name": "Data Structure - Plot",
+        "func": "switch (msg.isActive) {\n    case true:\n        msg.payload = msg.payload.LLC_SENSOR;\n        return msg;\n    default:\n        //msg.payload = [];\n        //console.log(\"Waiting\");\n        //return msg;\n}\n",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1580,
+        "y": 580,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "381a217fca3a2dc7",
+        "type": "function",
+        "z": "b13dc9c6b0ef4a6f",
+        "name": "Prepara Sensor Query",
+        "func": "var groupID = flow.get(\"groupID\");\nvar counter = flow.get(\"counter\");\n\nmsg.current_dt = flow.get(\"current_time\");\n\nswitch (msg.isActive) {\n    case true:\n        msg.process_time = msg.payload.LLC_CLOCK_TIME\n        msg.payload = msg.payload.LLC_SENSOR;\n        msg.topic = \"INSERT INTO filling_sensor_llc (GROUP_ID, COUNTER, PROCESS_TIME, DATE_TIME, SENSOR_VALUE) VALUES ('\" + groupID + \"', \" + counter + \", \" + msg.process_time + \", '\" + msg.current_dt + \"', \" + msg.payload + \")\";\n        return msg;\n\n    default:\n        //console.log(\"Waiting\");\n\n}\n\n\n",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1580,
+        "y": 540,
+        "wires": [
+            [
+                "bcc3602fcbb42aad"
+            ]
+        ]
+    },
+    {
+        "id": "56e90166cf48500a",
+        "type": "function",
+        "z": "b13dc9c6b0ef4a6f",
+        "name": "Data Structure - Gauge",
+        "func": "switch (msg.isActive) {\n    case true:\n        msg.roundValue = msg.payload.LLC_SENSOR.toFixed(3);\n        msg.timer = msg.payload.LLC_CLOCK_TIME;\n        return msg;\n    default:\n        msg.roundValue = 0;\n        msg.timer = flow.get(\"counter\");\n        //console.log(\"Waiting\");\n        return msg;\n}\n",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1590,
+        "y": 620,
+        "wires": [
+            [
+                "50d1a768690f0ab5"
+            ]
+        ]
+    },
+    {
+        "id": "794059e82425381c",
+        "type": "function",
+        "z": "b13dc9c6b0ef4a6f",
+        "name": "function 30",
+        "func": "\n    if (msg.payload.LLC_VACUUM_ON == true){\n        msg.active = 'Activated';\n        msg.active_vin = msg.payload.LLC_VIN;\n        msg.active_seq = msg.payload.LLC_SEQ;\n    }else{\n        msg.active = 'Deactivated'\n        msg.active_vin = 'None';\n        msg.active_seq = 'None';\n    }\n\n\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 550,
+        "y": 840,
+        "wires": [
+            [
+                "599f9290efa9d1fc",
+                "360123f4fe2dfcc4",
+                "82f868a5170678c3"
+            ]
+        ]
+    },
+    {
+        "id": "360123f4fe2dfcc4",
+        "type": "ui_text",
+        "z": "b13dc9c6b0ef4a6f",
+        "group": "b3a823f37e86385f",
+        "order": 2,
+        "width": 4,
+        "height": 1,
+        "name": "",
+        "label": "VIN: ",
+        "format": "{{msg.active_vin}}",
+        "layout": "row-left",
+        "className": "",
+        "style": false,
+        "font": "",
+        "fontSize": 16,
+        "color": "#000000",
+        "x": 1130,
+        "y": 880,
+        "wires": []
+    },
+    {
+        "id": "599f9290efa9d1fc",
+        "type": "ui_text",
+        "z": "b13dc9c6b0ef4a6f",
+        "group": "b3a823f37e86385f",
+        "order": 1,
+        "width": 4,
+        "height": 1,
+        "name": "",
+        "label": "Status: ",
+        "format": "{{msg.active}}",
+        "layout": "row-left",
+        "className": "",
+        "style": false,
+        "font": "",
+        "fontSize": 16,
+        "color": "#000000",
+        "x": 1130,
+        "y": 840,
+        "wires": []
+    },
+    {
+        "id": "82f868a5170678c3",
+        "type": "ui_text",
+        "z": "b13dc9c6b0ef4a6f",
+        "group": "b3a823f37e86385f",
+        "order": 3,
+        "width": 3,
+        "height": 1,
+        "name": "",
+        "label": "SEQ: ",
+        "format": "{{msg.active_seq}}",
+        "layout": "row-left",
+        "className": "",
+        "style": false,
+        "font": "",
+        "fontSize": 16,
+        "color": "#000000",
+        "x": 1130,
+        "y": 920,
+        "wires": []
+    },
+    {
+        "id": "559e8452c3e6c62b",
+        "type": "function",
+        "z": "b13dc9c6b0ef4a6f",
+        "name": "18s",
+        "func": "msg.topic = `   WITH RankedData AS (\n                    SELECT\n                        GROUP_ID,\n                        DATE_TIME,\n                        SENSOR_VALUE,\n                        ROW_NUMBER() OVER (PARTITION BY GROUP_ID ORDER BY DATE_TIME ASC) AS rn\n                    FROM filling_sensor_llc \n                    WHERE PROCESS_TIME = 18 AND DATE_TIME >= NOW() - INTERVAL 24 HOUR\n                )\n                SELECT\n                    GROUP_ID,\n                    DATE_TIME,\n                    SENSOR_VALUE\n                FROM RankedData\n                WHERE rn = 1\n                ORDER BY DATE_TIME;`;\n\n//DATE_TIME >= NOW() - INTERVAL 60 MINUTE\";\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 530,
+        "y": 1120,
+        "wires": [
+            [
+                "ea6c2880583f1dac"
+            ]
+        ]
+    },
+    {
+        "id": "c9a7b070e041d519",
+        "type": "ui_chart",
+        "z": "b13dc9c6b0ef4a6f",
+        "name": "",
+        "group": "b3a823f37e86385f",
+        "order": 15,
+        "width": 15,
+        "height": 6,
+        "label": "18s CHECK VALUE",
+        "chartType": "line",
+        "legend": "true",
+        "xformat": "auto",
+        "interpolate": "linear",
+        "nodata": "",
+        "dot": false,
+        "ymin": "",
+        "ymax": "",
+        "removeOlder": 1,
+        "removeOlderPoints": "",
+        "removeOlderUnit": "86400",
+        "cutout": 0,
+        "useOneColor": false,
+        "useUTC": false,
+        "colors": [
+            "#00ffff",
+            "#ffff00",
+            "#ff7f0e",
+            "#ff00ff",
+            "#98df8a",
+            "#d62728",
+            "#ff9896",
+            "#9467bd",
+            "#c5b0d5"
+        ],
+        "outputs": 1,
+        "useDifferentColor": false,
+        "className": "",
+        "x": 1170,
+        "y": 1120,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "573f6add4f5e2f7d",
+        "type": "function",
+        "z": "b13dc9c6b0ef4a6f",
+        "name": "function 31",
+        "func": "function prepararDados() {\n    var dadosAvgHour = flow.get(\"avg_hour\")\n    console.log(dadosAvgHour)\n    var avgHourValues = [];\n    var labels = []; //Eixo X - Horário\n    var sensorValues = []; //Eixo Y - Valor do Sensor\n    var limiteValues = []; //Eixo Y - Valor Limite\n    var mediaValues = []; //Eixo Y - Valor Médio\n\n    //Valor limite\n    var limite = 25.0;\n\n    //Calcula a média dos valores\n    var soma = 0;\n    for (var i = 0; i < msg.payload.length; i++) {\n        soma += msg.payload[i].SENSOR_VALUE;\n    }\n    var media = soma / msg.payload.length;\n\n    // Calcula o desvio médio e desvio padrão\n    var desvioMedio = 0;\n    var desvioPadrao = 0;\n    for (var i = 0; i < msg.payload.length; i++) {\n        var diff = msg.payload[i].SENSOR_VALUE - media;\n        desvioMedio += Math.abs(diff);\n        desvioPadrao += Math.pow(diff, 2);\n    }\n    desvioMedio /= msg.payload.length;\n    desvioPadrao = Math.sqrt(desvioPadrao / msg.payload.length);\n\n    msg.desvMed = desvioMedio.toFixed(5);\n    msg.desvPad = desvioPadrao.toFixed(5);\n\n    //Itera sobre os dados e extrair os valores necessários\n    msg.payload.forEach(function (leitura) {\n        var time = getDateTime(leitura.DATE_TIME);\n        var hour = extrairHoraInteira(time);\n        console.log(\"HOUR:\",hour)\n        labels.push(time);\n        avgHourValues.push(findValue(dadosAvgHour, hour))\n        sensorValues.push(leitura.SENSOR_VALUE);\n        limiteValues.push(limite);\n        mediaValues.push(media);\n    });\n\n    return [{\n        series: ['Sensor Value', 'Limit', 'Average', 'Hour Avg'],\n        data: [sensorValues, limiteValues, mediaValues, avgHourValues],\n        labels: labels\n    }];\n}\n\nfunction getDateTime(dataHoraLocal) {\n    //Define o fuso horário para o Horário de Brasília (BRT - UTC-3)\n    dataHoraLocal.setUTCHours(dataHoraLocal.getUTCHours() - 3);\n    //Formata a data e hora no formato desejado (por exemplo, 'YYYY-MM-DD HH:mm:ss')\n    var dataHoraFormatada = dataHoraLocal.toISOString().slice(0, 19).replace('T', ' ');\n    return dataHoraFormatada;\n}\n\nfunction extrairHoraInteira(dataHoraFormatada) {\n    //Extrai a parte da hora (HH) da string formatada\n    var horaString = dataHoraFormatada.slice(11, 13);\n    //Converte a hora de string para inteiro\n    var horaInteira = parseInt(horaString, 10);\n    var horaSelect = \"\";\n\n    if (horaInteira <= 9){\n        horaSelect = \"0\" + horaInteira;\n    }else{\n        horaSelect = horaSelect + horaInteira;\n    }\n\n    return horaSelect;\n}\n\nfunction findValue(dadosAvgHour, targetHour){\n    var averageSensorValue;\n    for (var i = 0; i < dadosAvgHour.length; i++) {\n        var entry = dadosAvgHour[i];\n\n        if (entry.HOUR_OF_DAY === targetHour) {\n\n            averageSensorValue = entry.AVERAGE_SENSOR_VALUE;\n            return averageSensorValue;\n        }\n    }\n}\n\nvar dadosFormatados = prepararDados();\n\nmsg.payload = dadosFormatados;\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 910,
+        "y": 1120,
+        "wires": [
+            [
+                "c9a7b070e041d519",
+                "3ef95f94af53f3ba"
+            ]
+        ]
+    },
+    {
+        "id": "3ef95f94af53f3ba",
+        "type": "ui_text",
+        "z": "b13dc9c6b0ef4a6f",
+        "group": "b3a823f37e86385f",
+        "order": 17,
+        "width": 6,
+        "height": 1,
+        "name": "",
+        "label": "18s - Mean Deviation: ",
+        "format": "{{msg.desvMed}}",
+        "layout": "row-left",
+        "className": "",
+        "style": false,
+        "font": "",
+        "fontSize": 16,
+        "color": "#000000",
+        "x": 1180,
+        "y": 1160,
+        "wires": []
+    },
+    {
+        "id": "f603e930d7097d17",
+        "type": "function",
+        "z": "b13dc9c6b0ef4a6f",
+        "name": "End",
+        "func": "msg.topic = `   WITH RankedData AS (\n                    SELECT\n                        GROUP_ID,\n                        DATE_TIME,\n                        SENSOR_VALUE,\n                        ROW_NUMBER() OVER (PARTITION BY GROUP_ID ORDER BY DATE_TIME ASC) AS rn\n                    FROM filling_sensor_llc \n                    WHERE PROCESS_TIME = 25 AND DATE_TIME >= NOW() - INTERVAL 24 HOUR\n                )\n                SELECT\n                    GROUP_ID,\n                    DATE_TIME,\n                    SENSOR_VALUE\n                FROM RankedData\n                WHERE rn = 1\n                ORDER BY DATE_TIME;`;\n\n//DATE_TIME >= NOW() - INTERVAL 60 MINUTE\";\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 530,
+        "y": 1300,
+        "wires": [
+            [
+                "5832fc50aef45f5c"
+            ]
+        ]
+    },
+    {
+        "id": "6716212d1c1d9983",
+        "type": "ui_chart",
+        "z": "b13dc9c6b0ef4a6f",
+        "name": "",
+        "group": "b3a823f37e86385f",
+        "order": 16,
+        "width": 15,
+        "height": 6,
+        "label": "END CHECK VALUE",
+        "chartType": "line",
+        "legend": "true",
+        "xformat": "auto",
+        "interpolate": "linear",
+        "nodata": "",
+        "dot": false,
+        "ymin": "",
+        "ymax": "",
+        "removeOlder": 1,
+        "removeOlderPoints": "",
+        "removeOlderUnit": "86400",
+        "cutout": 0,
+        "useOneColor": false,
+        "useUTC": false,
+        "colors": [
+            "#00ffff",
+            "#ffff00",
+            "#ff7f0e",
+            "#ff00ff",
+            "#98df8a",
+            "#d62728",
+            "#ff9896",
+            "#9467bd",
+            "#c5b0d5"
+        ],
+        "outputs": 1,
+        "useDifferentColor": false,
+        "className": "",
+        "x": 1170,
+        "y": 1300,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "6c9aa313617929ad",
+        "type": "function",
+        "z": "b13dc9c6b0ef4a6f",
+        "name": "function 32",
+        "func": "function prepararDados() {\n    var dadosAvgHour = flow.get(\"avg_hour25\")\n    var avgHourValues = [];\n    var labels = []; //Eixo X - Horário\n    var sensorValues = []; //Eixo Y - Valor do Sensor\n    var limiteValues = []; //Eixo Y - Valor Limite\n    var mediaValues = []; //Eixo Y - Valor Médio\n\n    //Valor limite\n    var limite = 25.0;\n\n    //Calcula a média dos valores\n    var soma = 0;\n    for (var i = 0; i < msg.payload.length; i++) {\n        soma += msg.payload[i].SENSOR_VALUE;\n    }\n    var media = soma / msg.payload.length;\n\n    // Calcula o desvio médio e desvio padrão\n    var desvioMedio = 0;\n    var desvioPadrao = 0;\n    for (var i = 0; i < msg.payload.length; i++) {\n        var diff = msg.payload[i].SENSOR_VALUE - media;\n        desvioMedio += Math.abs(diff);\n        desvioPadrao += Math.pow(diff, 2);\n    }\n    desvioMedio /= msg.payload.length;\n    desvioPadrao = Math.sqrt(desvioPadrao / msg.payload.length);\n\n    msg.desvMed = desvioMedio.toFixed(5);\n    msg.desvPad = desvioPadrao.toFixed(5);\n\n        //Itera sobre os dados e extrair os valores necessários\n    msg.payload.forEach(function (leitura) {\n        var time = getDateTime(leitura.DATE_TIME);\n        var hour = extrairHoraInteira(time);\n        console.log(\"HOUR:\",hour)\n        labels.push(time);\n        avgHourValues.push(findValue(dadosAvgHour, hour))\n        sensorValues.push(leitura.SENSOR_VALUE);\n        limiteValues.push(limite);\n        mediaValues.push(media);\n    });\n\n    return [{\n        series: ['Sensor Value', 'Limit', 'Average', 'Hour Avg'],\n        data: [sensorValues, limiteValues, mediaValues, avgHourValues],\n        labels: labels\n    }];\n}\n\nfunction getDateTime(dataHoraLocal) {\n    //Define o fuso horário para o Horário de Brasília (BRT - UTC-3)\n    dataHoraLocal.setUTCHours(dataHoraLocal.getUTCHours() - 3);\n    //Formata a data e hora no formato desejado (por exemplo, 'YYYY-MM-DD HH:mm:ss')\n    var dataHoraFormatada = dataHoraLocal.toISOString().slice(0, 19).replace('T', ' ');\n    return dataHoraFormatada;\n}\n\nfunction extrairHoraInteira(dataHoraFormatada) {\n    //Extrai a parte da hora (HH) da string formatada\n    var horaString = dataHoraFormatada.slice(11, 13);\n    //Converte a hora de string para inteiro\n    var horaInteira = parseInt(horaString, 10);\n    var horaSelect = \"\";\n\n    if (horaInteira <= 9){\n        horaSelect = \"0\" + horaInteira;\n    }else{\n        horaSelect = horaSelect + horaInteira;\n    }\n\n    return horaSelect;\n}\n\nfunction findValue(dadosAvgHour, targetHour){\n    var averageSensorValue;\n    for (var i = 0; i < dadosAvgHour.length; i++) {\n        var entry = dadosAvgHour[i];\n\n        if (entry.HOUR_OF_DAY === targetHour) {\n\n            averageSensorValue = entry.AVERAGE_SENSOR_VALUE;\n            return averageSensorValue;\n        }\n    }\n}\n\nvar dadosFormatados = prepararDados();\n\nmsg.payload = dadosFormatados;\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 910,
+        "y": 1300,
+        "wires": [
+            [
+                "6716212d1c1d9983",
+                "9859bdf3cc32ac45"
+            ]
+        ]
+    },
+    {
+        "id": "9859bdf3cc32ac45",
+        "type": "ui_text",
+        "z": "b13dc9c6b0ef4a6f",
+        "group": "b3a823f37e86385f",
+        "order": 21,
+        "width": 6,
+        "height": 1,
+        "name": "",
+        "label": "END - Mean Deviation: ",
+        "format": "{{msg.desvMed}}",
+        "layout": "row-left",
+        "className": "",
+        "style": false,
+        "font": "",
+        "fontSize": 16,
+        "color": "#000000",
+        "x": 1180,
+        "y": 1340,
+        "wires": []
+    },
+    {
+        "id": "25f303b21c414118",
+        "type": "debug",
+        "z": "b13dc9c6b0ef4a6f",
+        "name": "debug 23",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 2040,
+        "y": 460,
+        "wires": []
+    },
+    {
+        "id": "88753108ade02847",
+        "type": "link in",
+        "z": "b13dc9c6b0ef4a6f",
+        "name": "link in 1",
+        "links": [
+            "8b3ea5c89877ade0"
+        ],
+        "x": 325,
+        "y": 1120,
+        "wires": [
+            [
+                "559e8452c3e6c62b",
+                "f603e930d7097d17",
+                "262bcbbc6be31637",
+                "578e42ee3d05d74e",
+                "b0291eb659b88050",
+                "b6523fc0da7a432a",
+                "8477c61225b79a91",
+                "c05daf912226f7da"
+            ]
+        ]
+    },
+    {
+        "id": "8b3ea5c89877ade0",
+        "type": "link out",
+        "z": "b13dc9c6b0ef4a6f",
+        "name": "link out 1",
+        "mode": "link",
+        "links": [
+            "88753108ade02847"
+        ],
+        "x": 2125,
+        "y": 500,
+        "wires": []
+    },
+    {
+        "id": "52eba16252ac6aa6",
+        "type": "function",
+        "z": "b13dc9c6b0ef4a6f",
+        "name": "DB DEBUG",
+        "func": "var sensor = msg.payload.LLC_SENSOR;\nvar vacuum_on = msg.payload.LLC_VACUUM_ON;\nvar vin = msg.payload.LLC_VIN;\nvar seq = msg.payload.LLC_SEQ;\nvar lh_VACUO_LARGE_NG = msg.payload.LLC_VACUUM_NG;\nvar lh_VACUO_LARGE_OK = msg.payload.LLC_VACUUM_OK;\nvar time = getDateTime();\n\nmsg.topic = \"INSERT INTO log_test_llc (SENSOR, VACUUM_ON, VIN, SEQ, VACUO_NG, VACUO_OK, DATE_TIME) VALUES \";\nmsg.topic = msg.topic + \"(\" + sensor + \", '\" + vacuum_on + \"', '\" + vin + \"', '\" + seq + \"', '\" + lh_VACUO_LARGE_NG + \"', '\" + lh_VACUO_LARGE_OK + \"', '\" + time + \"')\";\n\n\nfunction getDateTime() {\n    var dataHoraLocal = new Date();\n    //Define o fuso horário para o Horário de Brasília (BRT - UTC-3)\n    dataHoraLocal.setUTCHours(dataHoraLocal.getUTCHours() - 3);\n    //Formata a data e hora no formato desejado (por exemplo, 'YYYY-MM-DD HH:mm:ss')\n    var dataHoraFormatada = dataHoraLocal.toISOString().slice(0, 19).replace('T', ' ');\n    return dataHoraFormatada;\n}\n\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 550,
+        "y": 680,
+        "wires": [
+            [
+                "525047fbfa8ddd6a"
+            ]
+        ]
+    },
+    {
+        "id": "25aa96217a0b59bd",
+        "type": "function",
+        "z": "b13dc9c6b0ef4a6f",
+        "name": "ENVIA DADOS PARA LLC10",
+        "func": "msg.payload = msg.payload.LLC_SEQ\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 600,
+        "y": 740,
+        "wires": [
+            [
+                "f1c438a040018eaf"
+            ]
+        ]
+    },
+    {
+        "id": "f1c438a040018eaf",
+        "type": "link out",
+        "z": "b13dc9c6b0ef4a6f",
+        "name": "link out 7",
+        "mode": "link",
+        "links": [
+            "eb0c0811063cc4dd"
+        ],
+        "x": 765,
+        "y": 740,
+        "wires": []
+    },
+    {
+        "id": "4014d056ef29a26e",
+        "type": "debug",
+        "z": "b13dc9c6b0ef4a6f",
+        "name": "debug 29",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 540,
+        "y": 540,
+        "wires": []
+    },
+    {
+        "id": "6c44aaa020d28cbd",
+        "type": "s7 in",
+        "z": "b13dc9c6b0ef4a6f",
+        "endpoint": "96de35ae7ee1a0fc",
+        "mode": "single",
+        "variable": "LLC_END_VALUE",
+        "diff": false,
+        "name": "",
+        "x": 1560,
+        "y": 700,
+        "wires": [
+            [
+                "340716809f9975ed",
+                "fc3fb5d3977ce2e9"
+            ]
+        ]
+    },
+    {
+        "id": "340716809f9975ed",
+        "type": "debug",
+        "z": "b13dc9c6b0ef4a6f",
+        "name": "debug 32",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1770,
+        "y": 660,
+        "wires": []
+    },
+    {
+        "id": "fc3fb5d3977ce2e9",
+        "type": "function",
+        "z": "b13dc9c6b0ef4a6f",
+        "name": "Read data after delay",
+        "func": "flow.set(\"endValueUpdated\", msg.payload)\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1790,
+        "y": 700,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "1aaa8966d024caad",
+        "type": "delay",
+        "z": "b13dc9c6b0ef4a6f",
+        "name": "",
+        "pauseType": "delay",
+        "timeout": "500",
+        "timeoutUnits": "milliseconds",
+        "rate": "1",
+        "nbRateUnits": "1",
+        "rateUnits": "second",
+        "randomFirst": "1",
+        "randomLast": "5",
+        "randomUnits": "seconds",
+        "drop": false,
+        "allowrate": false,
+        "outputs": 1,
+        "x": 1710,
+        "y": 460,
+        "wires": [
+            [
+                "0b477167ab2f5dd9"
+            ]
+        ]
+    },
+    {
+        "id": "9782ed0a1e38a45d",
+        "type": "function",
+        "z": "b13dc9c6b0ef4a6f",
+        "name": "Prepare to Delay",
+        "func": "if (msg.state == \"deactivated\") {\n    return msg;\n}\n\n",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1570,
+        "y": 500,
+        "wires": [
+            [
+                "1aaa8966d024caad"
+            ]
+        ]
+    },
+    {
+        "id": "262bcbbc6be31637",
+        "type": "function",
+        "z": "b13dc9c6b0ef4a6f",
+        "name": "TTOK",
+        "func": "msg.topic = `WITH RankedData AS (\n                SELECT\n                    GROUP_ID,\n                    DATE_TIME,\n                    SENSOR_VALUE,\n                    PROCESS_TIME,\n                    COUNTER,\n                    ROW_NUMBER() OVER (PARTITION BY GROUP_ID ORDER BY COUNTER ASC) AS rn\n                FROM lms_assy_admin.filling_sensor_llc\n                WHERE SENSOR_VALUE < 25 AND DATE_TIME >= NOW() - INTERVAL 24 HOUR\n            )\n            SELECT\n                GROUP_ID,\n                DATE_TIME AS FIRST_BELOW_25_TIME,\n                SENSOR_VALUE AS FIRST_BELOW_25_VALUE,\n                PROCESS_TIME AS FIRST_BELOW_25_PROCESS_TIME\n            FROM RankedData\n            WHERE rn = 1\n            ORDER BY FIRST_BELOW_25_TIME;`;\n    \nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 530,
+        "y": 1400,
+        "wires": [
+            [
+                "0eebe0ed626f021c"
+            ]
+        ]
+    },
+    {
+        "id": "0eebe0ed626f021c",
+        "type": "mysql",
+        "z": "b13dc9c6b0ef4a6f",
+        "mydb": "a14878b16f086ba1",
+        "name": "",
+        "x": 730,
+        "y": 1400,
+        "wires": [
+            [
+                "cdb0f16a16b4c224"
+            ]
+        ]
+    },
+    {
+        "id": "cdb0f16a16b4c224",
+        "type": "function",
+        "z": "b13dc9c6b0ef4a6f",
+        "name": "function 54",
+        "func": "function prepararDados() {\n    var labels = []; //Eixo X - Horário\n    var ttok = []; //Eixo Y - Valor do Sensor\n    var limiteValues = []; //Eixo Y - Valor Limite\n    var mediaValues = []; //Eixo Y - Valor Médio\n\n    //Valor limite\n    var limite = 18.0;\n\n    //Calcula a média dos valores\n    var soma = 0;\n    for (var i = 0; i < msg.payload.length; i++) {\n        soma += msg.payload[i].FIRST_BELOW_25_PROCESS_TIME;\n    }\n    var media = soma / msg.payload.length;\n\n    // Calcula o desvio médio e desvio padrão\n    var desvioMedio = 0;\n    var desvioPadrao = 0;\n    for (var i = 0; i < msg.payload.length; i++) {\n        var diff = msg.payload[i].FIRST_BELOW_25_PROCESS_TIME - media;\n        desvioMedio += Math.abs(diff);\n        desvioPadrao += Math.pow(diff, 2);\n    }\n    desvioMedio /= msg.payload.length;\n    desvioPadrao = Math.sqrt(desvioPadrao / msg.payload.length);\n\n    msg.desvMed = desvioMedio.toFixed(5);\n    msg.desvPad = desvioPadrao.toFixed(5);\n\n    //Itera sobre os dados e extrair os valores necessários\n    msg.payload.forEach(function (leitura) {\n        labels.push(getDateTime(leitura.FIRST_BELOW_25_TIME));\n        ttok.push(leitura.FIRST_BELOW_25_PROCESS_TIME);\n        limiteValues.push(limite);\n        mediaValues.push(media);\n    });\n\n    return [{\n        series: ['Time to OK', 'Limit', 'Average'],\n        data: [ttok, limiteValues, mediaValues],\n        labels: labels\n    }];\n}\n\nfunction getDateTime(dataHoraLocal) {\n    //Define o fuso horário para o Horário de Brasília (BRT - UTC-3)\n    dataHoraLocal.setUTCHours(dataHoraLocal.getUTCHours() - 3);\n    //Formata a data e hora no formato desejado (por exemplo, 'YYYY-MM-DD HH:mm:ss')\n    var dataHoraFormatada = dataHoraLocal.toISOString().slice(0, 19).replace('T', ' ');\n    return dataHoraFormatada;\n}\n\n\nvar dadosFormatados = prepararDados();\n\nmsg.payload = dadosFormatados;\n\nreturn msg;\n",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 910,
+        "y": 1400,
+        "wires": [
+            [
+                "478285b19129975d",
+                "842133cf7d4507da"
+            ]
+        ]
+    },
+    {
+        "id": "478285b19129975d",
+        "type": "ui_chart",
+        "z": "b13dc9c6b0ef4a6f",
+        "name": "",
+        "group": "b3a823f37e86385f",
+        "order": 22,
+        "width": 30,
+        "height": 6,
+        "label": "Time to OK (TTOK)",
+        "chartType": "line",
+        "legend": "true",
+        "xformat": "auto",
+        "interpolate": "step",
+        "nodata": "",
+        "dot": false,
+        "ymin": "",
+        "ymax": "",
+        "removeOlder": 1,
+        "removeOlderPoints": "",
+        "removeOlderUnit": "86400",
+        "cutout": 0,
+        "useOneColor": false,
+        "useUTC": false,
+        "colors": [
+            "#00ffff",
+            "#ffff00",
+            "#ff7f0e",
+            "#2ca02c",
+            "#98df8a",
+            "#d62728",
+            "#ff9896",
+            "#9467bd",
+            "#c5b0d5"
+        ],
+        "outputs": 1,
+        "useDifferentColor": false,
+        "className": "",
+        "x": 1170,
+        "y": 1400,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "842133cf7d4507da",
+        "type": "ui_text",
+        "z": "b13dc9c6b0ef4a6f",
+        "group": "b3a823f37e86385f",
+        "order": 19,
+        "width": 6,
+        "height": 1,
+        "name": "",
+        "label": "TTOK - Mean Deviation: ",
+        "format": "{{msg.desvMed}}",
+        "layout": "row-left",
+        "className": "",
+        "style": false,
+        "font": "",
+        "fontSize": 16,
+        "color": "#000000",
+        "x": 1180,
+        "y": 1440,
+        "wires": []
+    },
+    {
+        "id": "578e42ee3d05d74e",
+        "type": "function",
+        "z": "b13dc9c6b0ef4a6f",
+        "name": "%OK",
+        "func": "msg.topic = `   SELECT\n                COUNT(CASE WHEN LLC_OK = 1 THEN 1 END) AS LLC_OK_1_count,\n                    COUNT(CASE WHEN LLC_NG = 1 THEN 1 END) AS LLC_OK_0_count\n                FROM filling_events_llc\n                WHERE\n                    START_TIME >= NOW() - INTERVAL 24 HOUR`;\n\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 530,
+        "y": 1500,
+        "wires": [
+            [
+                "1fd0ddfe4f5de23e"
+            ]
+        ]
+    },
+    {
+        "id": "1fd0ddfe4f5de23e",
+        "type": "mysql",
+        "z": "b13dc9c6b0ef4a6f",
+        "mydb": "a14878b16f086ba1",
+        "name": "",
+        "x": 730,
+        "y": 1500,
+        "wires": [
+            [
+                "82f14347d54c920e"
+            ]
+        ]
+    },
+    {
+        "id": "82f14347d54c920e",
+        "type": "function",
+        "z": "b13dc9c6b0ef4a6f",
+        "name": "function 56",
+        "func": "var ok = msg.payload[0].LLC_OK_1_count;\nvar nok = msg.payload[0].LLC_OK_0_count;\n\nvar sum = ok + nok;\n\nvar pct = (ok/sum)*100;\n\npct = pct.toFixed(2);\n\nmsg.payload = pct + \"%\"\n\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 910,
+        "y": 1500,
+        "wires": [
+            [
+                "3374db43a2e6262f"
+            ]
+        ]
+    },
+    {
+        "id": "3374db43a2e6262f",
+        "type": "ui_text",
+        "z": "b13dc9c6b0ef4a6f",
+        "group": "b3a823f37e86385f",
+        "order": 5,
+        "width": 4,
+        "height": 1,
+        "name": "",
+        "label": "OK (%): ",
+        "format": "{{msg.payload}}",
+        "layout": "row-left",
+        "className": "",
+        "style": false,
+        "font": "",
+        "fontSize": 16,
+        "color": "#000000",
+        "x": 1140,
+        "y": 1500,
+        "wires": []
+    },
+    {
+        "id": "b0291eb659b88050",
+        "type": "function",
+        "z": "b13dc9c6b0ef4a6f",
+        "name": "AVG HOUR",
+        "func": "msg.topic = `   WITH RankedData AS (\n                    SELECT\n                        GROUP_ID,\n                        DATE_FORMAT(DATE_TIME, '%H') AS HOUR_OF_DAY,\n                        SENSOR_VALUE,\n                        ROW_NUMBER() OVER (PARTITION BY GROUP_ID ORDER BY COUNTER ASC) AS rn\n                    FROM filling_sensor_llc\n                    WHERE PROCESS_TIME = 18 AND DATE_TIME >= NOW() - INTERVAL 7 DAY\n                )\n                SELECT\n                    HOUR_OF_DAY,\n                    AVG(SENSOR_VALUE) AS AVERAGE_SENSOR_VALUE\n                FROM RankedData\n                WHERE rn = 1\n                GROUP BY HOUR_OF_DAY\n                ORDER BY HOUR_OF_DAY`;\n\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 550,
+        "y": 1600,
+        "wires": [
+            [
+                "67d0866ea690ec1c"
+            ]
+        ]
+    },
+    {
+        "id": "67d0866ea690ec1c",
+        "type": "mysql",
+        "z": "b13dc9c6b0ef4a6f",
+        "mydb": "a14878b16f086ba1",
+        "name": "",
+        "x": 730,
+        "y": 1600,
+        "wires": [
+            [
+                "8b11f1c75e7c3c8d",
+                "e1d464ea7fd34a18"
+            ]
+        ]
+    },
+    {
+        "id": "8b11f1c75e7c3c8d",
+        "type": "function",
+        "z": "b13dc9c6b0ef4a6f",
+        "name": "function 57",
+        "func": "function prepararDados() {\n    var labels = []; //Eixo X - Horário\n    var hour_avg = []; //Eixo Y - Valor do Sensor\n    var limiteValues = []; //Eixo Y - Valor Limite\n    var mediaValues = []; //Eixo Y - Valor Médio\n\n    //Valor limite\n    var limite = 25;\n\n    //Calcula a média dos valores\n    var soma = 0;\n    for (var i = 0; i < msg.payload.length; i++) {\n        soma += msg.payload[i].AVERAGE_SENSOR_VALUE;\n    }\n    var media = soma / msg.payload.length;\n\n\n    //Itera sobre os dados e extrair os valores necessários\n    msg.payload.forEach(function (leitura) {\n        labels.push(leitura.HOUR_OF_DAY);\n        hour_avg.push(leitura.AVERAGE_SENSOR_VALUE);\n        limiteValues.push(limite);\n        mediaValues.push(media);\n    });\n\n    return [{\n        series: ['Hour Avg', 'Limit', 'Average'],\n        data: [hour_avg, limiteValues, mediaValues],\n        labels: labels\n    }];\n}\n\n\nvar dadosFormatados = prepararDados();\n\nmsg.payload = dadosFormatados;\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 910,
+        "y": 1600,
+        "wires": [
+            [
+                "2cda85e06aaf0c8a"
+            ]
+        ]
+    },
+    {
+        "id": "2cda85e06aaf0c8a",
+        "type": "ui_chart",
+        "z": "b13dc9c6b0ef4a6f",
+        "name": "",
+        "group": "b3a823f37e86385f",
+        "order": 10,
+        "width": 7,
+        "height": 7,
+        "label": "AVERAGE 18s PER HOUR - LAST 7 DAYS",
+        "chartType": "line",
+        "legend": "true",
+        "xformat": "auto",
+        "interpolate": "bezier",
+        "nodata": "",
+        "dot": true,
+        "ymin": "",
+        "ymax": "",
+        "removeOlder": 1,
+        "removeOlderPoints": "",
+        "removeOlderUnit": "86400",
+        "cutout": 0,
+        "useOneColor": false,
+        "useUTC": false,
+        "colors": [
+            "#00ffff",
+            "#ffff00",
+            "#ff7f0e",
+            "#2ca02c",
+            "#98df8a",
+            "#d62728",
+            "#ff9896",
+            "#9467bd",
+            "#c5b0d5"
+        ],
+        "outputs": 1,
+        "useDifferentColor": false,
+        "className": "",
+        "x": 1240,
+        "y": 1600,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "b6523fc0da7a432a",
+        "type": "function",
+        "z": "b13dc9c6b0ef4a6f",
+        "name": "function 58",
+        "func": "msg.topic = `   WITH RankedData AS (\n                SELECT\n                    GROUP_ID,\n                    SENSOR_VALUE,\n                    PROCESS_TIME,\n                    DATE_TIME,\n                    ROW_NUMBER() OVER (PARTITION BY GROUP_ID ORDER BY DATE_TIME ASC) AS rn\n                FROM filling_sensor_llc\n                WHERE PROCESS_TIME = 18 AND DATE_TIME >= NOW() - INTERVAL 24 HOUR\n                )\n                SELECT\n                    GROUP_ID,\n                    SENSOR_VALUE,\n                    CASE WHEN SENSOR_VALUE > 25 THEN '0' ELSE '1' END AS RESULTADO\n                FROM RankedData\n                WHERE rn = 1;`;\n\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 550,
+        "y": 1700,
+        "wires": [
+            [
+                "1fdeb667be0f09aa"
+            ]
+        ]
+    },
+    {
+        "id": "1fdeb667be0f09aa",
+        "type": "mysql",
+        "z": "b13dc9c6b0ef4a6f",
+        "mydb": "a14878b16f086ba1",
+        "name": "",
+        "x": 730,
+        "y": 1700,
+        "wires": [
+            [
+                "53972dd1acf38de9"
+            ]
+        ]
+    },
+    {
+        "id": "53972dd1acf38de9",
+        "type": "function",
+        "z": "b13dc9c6b0ef4a6f",
+        "name": "function 59",
+        "func": "function prepararDados() {\n    var soma_menor = 0; //Eixo X - Horário\n    var soma_maior = 0; //Eixo Y - Valor do Sensor\n\n    //Calcula a soma\n    for (var i = 0; i < msg.payload.length; i++) {\n        if(msg.payload[i].RESULTADO == 0){\n            soma_maior = soma_maior + 1;\n        } else if (msg.payload[i].RESULTADO == 1) {\n            soma_menor = soma_menor + 1;\n        }\n    }\n    \n    var sum = soma_menor + soma_maior;\n\n    var pct = (soma_menor / sum) * 100;\n\n    pct = pct.toFixed(2);\n\n    pct = pct + \"%\"\n\n    return pct\n}\n\n\nvar dadosFormatados = prepararDados();\n\nmsg.payload = dadosFormatados;\n\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 910,
+        "y": 1700,
+        "wires": [
+            [
+                "8f78996aad1c3706"
+            ]
+        ]
+    },
+    {
+        "id": "8f78996aad1c3706",
+        "type": "ui_text",
+        "z": "b13dc9c6b0ef4a6f",
+        "group": "b3a823f37e86385f",
+        "order": 6,
+        "width": 5,
+        "height": 1,
+        "name": "",
+        "label": "Result < 25 (%): ",
+        "format": "{{msg.payload}}",
+        "layout": "row-left",
+        "className": "",
+        "style": false,
+        "font": "",
+        "fontSize": 16,
+        "color": "#000000",
+        "x": 1160,
+        "y": 1700,
+        "wires": []
+    },
+    {
+        "id": "e1d464ea7fd34a18",
+        "type": "function",
+        "z": "b13dc9c6b0ef4a6f",
+        "name": "function 60",
+        "func": "flow.set(\"avg_hour\", msg.payload);\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 910,
+        "y": 1560,
+        "wires": [
+            [
+                "11734b9a7582efd0"
+            ]
+        ]
+    },
+    {
+        "id": "11734b9a7582efd0",
+        "type": "debug",
+        "z": "b13dc9c6b0ef4a6f",
+        "name": "debug 33",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload[23]",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1140,
+        "y": 1560,
+        "wires": []
+    },
+    {
+        "id": "fd72115a0373bfb2",
+        "type": "function",
+        "z": "b13dc9c6b0ef4a6f",
+        "name": "function 62",
+        "func": "flow.set(\"avg_hour25\", msg.payload);\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 910,
+        "y": 1220,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "8477c61225b79a91",
+        "type": "function",
+        "z": "b13dc9c6b0ef4a6f",
+        "name": "AVG HOUR 25",
+        "func": "msg.topic = `   WITH RankedData AS (\n                    SELECT\n                        GROUP_ID,\n                        DATE_FORMAT(DATE_TIME, '%H') AS HOUR_OF_DAY,\n                        SENSOR_VALUE,\n                        ROW_NUMBER() OVER (PARTITION BY GROUP_ID ORDER BY COUNTER ASC) AS rn\n                    FROM filling_sensor_llc\n                    WHERE PROCESS_TIME = 25 AND DATE_TIME >= NOW() - INTERVAL 7 DAY\n                )\n                SELECT\n                    HOUR_OF_DAY,\n                    AVG(SENSOR_VALUE) AS AVERAGE_SENSOR_VALUE\n                FROM RankedData\n                WHERE rn = 1\n                GROUP BY HOUR_OF_DAY\n                ORDER BY HOUR_OF_DAY`;\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 560,
+        "y": 1220,
+        "wires": [
+            [
+                "17e50d51453b44d3"
+            ]
+        ]
+    },
+    {
+        "id": "c05daf912226f7da",
+        "type": "function",
+        "z": "b13dc9c6b0ef4a6f",
+        "name": "AVG CURVE",
+        "func": "msg.topic = `   SELECT\n                    COUNTER,\n                    AVG(SENSOR_VALUE) AS AVERAGE_SENSOR_VALUE\n                FROM (\n                    SELECT\n                        COUNTER,\n                        SENSOR_VALUE,\n                        ROW_NUMBER() OVER (PARTITION BY COUNTER ORDER BY SENSOR_VALUE) AS RowAsc,\n                        COUNT(*) OVER (PARTITION BY COUNTER) AS TotalRows\n                    FROM lms_assy_admin.filling_sensor_llc\n                    WHERE DATE_TIME >= NOW() - INTERVAL 60 MINUTE\n                ) AS ranked\n                WHERE \n                    RowAsc > 8 AND RowAsc <= TotalRows - 8\n                GROUP BY COUNTER\n                ORDER BY COUNTER;`;\n                \nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 560,
+        "y": 1780,
+        "wires": [
+            [
+                "7f8260f929f82013"
+            ]
+        ]
+    },
+    {
+        "id": "fbfc8157f059bec6",
+        "type": "function",
+        "z": "b13dc9c6b0ef4a6f",
+        "name": "function 63",
+        "func": "function prepararDados() {\n    var labels = []; //Eixo X - Horário\n    var hour_avg = []; //Eixo Y - Valor do Sensor\n    var limiteValues = []; //Eixo Y - Valor Limite\n\n    //Valor limite\n    var limite = 25;\n\n\n    //Itera sobre os dados e extrair os valores necessários\n    msg.payload.forEach(function (leitura) {\n        labels.push(leitura.COUNTER);\n        hour_avg.push(leitura.AVERAGE_SENSOR_VALUE);\n        limiteValues.push(limite);\n    });\n\n    return [{\n        series: ['Average Curve', 'Limit', ],\n        data: [hour_avg, limiteValues, ],\n        labels: labels\n    }];\n}\n\nflow.set(\"avg_curve\", msg.payload);\n\nvar dadosFormatados = prepararDados();\n\nmsg.payload = dadosFormatados;\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 910,
+        "y": 1780,
+        "wires": [
+            [
+                "4aa45d5369a4a23f"
+            ]
+        ]
+    },
+    {
+        "id": "4aa45d5369a4a23f",
+        "type": "ui_chart",
+        "z": "b13dc9c6b0ef4a6f",
+        "name": "",
+        "group": "b3a823f37e86385f",
+        "order": 9,
+        "width": 9,
+        "height": 7,
+        "label": "AVERAGE CURVE - LAST HOUR",
+        "chartType": "line",
+        "legend": "true",
+        "xformat": "auto",
+        "interpolate": "bezier",
+        "nodata": "",
+        "dot": false,
+        "ymin": "0",
+        "ymax": "50",
+        "removeOlder": 1,
+        "removeOlderPoints": "",
+        "removeOlderUnit": "86400",
+        "cutout": 0,
+        "useOneColor": false,
+        "useUTC": false,
+        "colors": [
+            "#ff8000",
+            "#ffff00",
+            "#ff7f0e",
+            "#2ca02c",
+            "#98df8a",
+            "#d62728",
+            "#ff9896",
+            "#9467bd",
+            "#c5b0d5"
+        ],
+        "outputs": 1,
+        "useDifferentColor": false,
+        "className": "",
+        "x": 1210,
+        "y": 1780,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "9b8551092f4a5ec1",
+        "type": "debug",
+        "z": "b13dc9c6b0ef4a6f",
+        "name": "debug 36",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 900,
+        "y": 1820,
+        "wires": []
+    },
+    {
+        "id": "dd4b3f8be484a24d",
+        "type": "link out",
+        "z": "b13dc9c6b0ef4a6f",
+        "name": "link out 8",
+        "mode": "link",
+        "links": [
+            "11cc2bcb0d526c48"
+        ],
+        "x": 2125,
+        "y": 540,
+        "wires": []
+    },
+    {
+        "id": "11cc2bcb0d526c48",
+        "type": "link in",
+        "z": "b13dc9c6b0ef4a6f",
+        "name": "link in 6",
+        "links": [
+            "dd4b3f8be484a24d"
+        ],
+        "x": 325,
+        "y": 1040,
+        "wires": [
+            [
+                "33eeacdac4d1b0d9"
+            ]
+        ]
+    },
+    {
+        "id": "33eeacdac4d1b0d9",
+        "type": "function",
+        "z": "b13dc9c6b0ef4a6f",
+        "name": "function 64",
+        "func": "var groupID = flow.get(\"groupID\");\nmsg.topic = 'SELECT COUNTER, SENSOR_VALUE FROM lms_assy_admin.filling_sensor_llc WHERE GROUP_ID = ' + groupID + ' ORDER BY COUNTER';\n\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 550,
+        "y": 1040,
+        "wires": [
+            [
+                "72d3cafee9335c14"
+            ]
+        ]
+    },
+    {
+        "id": "5518508215a48dfb",
+        "type": "debug",
+        "z": "b13dc9c6b0ef4a6f",
+        "name": "debug 34",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 900,
+        "y": 1000,
+        "wires": []
+    },
+    {
+        "id": "b08d2f9371132adb",
+        "type": "function",
+        "z": "b13dc9c6b0ef4a6f",
+        "name": "function 65",
+        "func": "function prepararDados() {\n    var dadosAvgCurve = flow.get(\"avg_curve\")\n    var avgCurveValues = [];\n    var labels = []; //Eixo X - Horário\n    var sensorValues = []; //Eixo Y - Valor do Sensor\n    var limiteValues = []; //Eixo Y - Valor Limite\n\n\n\n    //Valor limite\n    var limite = 25.0;\n\n\n    for (var i = 0; i < dadosAvgCurve.length; i++) {\n        avgCurveValues.push(dadosAvgCurve[i].AVERAGE_SENSOR_VALUE)\n        labels.push(dadosAvgCurve[i].COUNTER)\n        limiteValues.push(limite);\n    }\n    var sum = 0;\n    for (var i = 0; i < msg.payload.length; i++) {\n        sensorValues.push(msg.payload[i].SENSOR_VALUE)\n        \n        //console.log('i: ', i, 'lbl: ', labels[i + sum], 'PT: ', msg.payload[i].COUNTER, 'sum: ', sum)\n\n        if (msg.payload[i].COUNTER != labels[i+sum]){\n            delete avgCurveValues[i];\n            delete labels[i];\n            delete limiteValues[i];\n            sum = sum + 1;\n\n        }\n    }\n\n    avgCurveValues = avgCurveValues.filter((value) => value !== undefined);\n    labels = labels.filter((value) => value !== undefined);\n    limiteValues = limiteValues.filter((value) => value !== undefined);\n\n    //console.log('avgCurveValues: ', avgCurveValues);\n    //console.log('labels: ', labels);\n    //console.log('limiteValues: ', limiteValues);\n    ////console.log('sensorValues: ', sensorValues);\n\n    return [{\n        series: ['Sensor Value', 'Limit',  'Average Curve'],\n        data: [sensorValues, limiteValues, avgCurveValues],\n        labels: labels\n    }];\n}\n\n\nvar dadosFormatados = prepararDados();\n\nmsg.payload = dadosFormatados;\n//console.log('################ ')\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 910,
+        "y": 1040,
+        "wires": [
+            [
+                "708acc3582fe5e3e",
+                "01a5dfdc9fcc1fe5"
+            ]
+        ]
+    },
+    {
+        "id": "708acc3582fe5e3e",
+        "type": "ui_chart",
+        "z": "b13dc9c6b0ef4a6f",
+        "name": "",
+        "group": "b3a823f37e86385f",
+        "order": 7,
+        "width": 10,
+        "height": 7,
+        "label": "LLC - Vacuum Value over Time - Real Time",
+        "chartType": "line",
+        "legend": "true",
+        "xformat": "auto",
+        "interpolate": "bezier",
+        "nodata": "",
+        "dot": true,
+        "ymin": "0",
+        "ymax": "50",
+        "removeOlder": 1,
+        "removeOlderPoints": "",
+        "removeOlderUnit": "86400",
+        "cutout": 0,
+        "useOneColor": false,
+        "useUTC": false,
+        "colors": [
+            "#00ffff",
+            "#ffff00",
+            "#ff7f0e",
+            "#2ca02c",
+            "#98df8a",
+            "#d62728",
+            "#ff9896",
+            "#9467bd",
+            "#c5b0d5"
+        ],
+        "outputs": 1,
+        "useDifferentColor": false,
+        "className": "",
+        "x": 1240,
+        "y": 1040,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "01a5dfdc9fcc1fe5",
+        "type": "debug",
+        "z": "b13dc9c6b0ef4a6f",
+        "name": "debug 37",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1140,
+        "y": 1000,
+        "wires": []
+    },
+    {
+        "id": "50d1a768690f0ab5",
+        "type": "link out",
+        "z": "b13dc9c6b0ef4a6f",
+        "name": "link out 9",
+        "mode": "link",
+        "links": [
+            "904f56a0549d3d24"
+        ],
+        "x": 2125,
+        "y": 620,
+        "wires": []
+    },
+    {
+        "id": "904f56a0549d3d24",
+        "type": "link in",
+        "z": "b13dc9c6b0ef4a6f",
+        "name": "link in 7",
+        "links": [
+            "50d1a768690f0ab5"
+        ],
+        "x": 325,
+        "y": 940,
+        "wires": [
+            [
+                "dc49e1a154499e56",
+                "7ec51b5c8e158bfc"
+            ]
+        ]
+    },
+    {
+        "id": "7ec51b5c8e158bfc",
+        "type": "ui_text",
+        "z": "b13dc9c6b0ef4a6f",
+        "group": "b3a823f37e86385f",
+        "order": 11,
+        "width": 4,
+        "height": 1,
+        "name": "",
+        "label": "LLC TIMER: ",
+        "format": "{{msg.timer}}",
+        "layout": "col-center",
+        "className": "",
+        "style": false,
+        "font": "",
+        "fontSize": 16,
+        "color": "#000000",
+        "x": 530,
+        "y": 900,
+        "wires": []
+    },
+    {
+        "id": "dc49e1a154499e56",
+        "type": "ui_gauge",
+        "z": "b13dc9c6b0ef4a6f",
+        "name": "",
+        "group": "b3a823f37e86385f",
+        "order": 8,
+        "width": 4,
+        "height": 3,
+        "gtype": "gage",
+        "title": "LLC - Gauge",
+        "label": "TORR",
+        "format": "{{msg.roundValue}}",
+        "min": 0,
+        "max": "25",
+        "colors": [
+            "#00b500",
+            "#e6e600",
+            "#ca3838"
+        ],
+        "seg1": "",
+        "seg2": "",
+        "diff": false,
+        "className": "",
+        "x": 530,
+        "y": 960,
+        "wires": []
+    },
+    {
+        "id": "7f8260f929f82013",
+        "type": "mysql",
+        "z": "b13dc9c6b0ef4a6f",
+        "mydb": "a14878b16f086ba1",
+        "name": "",
+        "x": 730,
+        "y": 1780,
+        "wires": [
+            [
+                "fbfc8157f059bec6",
+                "9b8551092f4a5ec1"
+            ]
+        ]
+    },
+    {
+        "id": "5832fc50aef45f5c",
+        "type": "mysql",
+        "z": "b13dc9c6b0ef4a6f",
+        "mydb": "a14878b16f086ba1",
+        "name": "",
+        "x": 730,
+        "y": 1300,
+        "wires": [
+            [
+                "6c9aa313617929ad"
+            ]
+        ]
+    },
+    {
+        "id": "ea6c2880583f1dac",
+        "type": "mysql",
+        "z": "b13dc9c6b0ef4a6f",
+        "mydb": "a14878b16f086ba1",
+        "name": "",
+        "x": 730,
+        "y": 1120,
+        "wires": [
+            [
+                "573f6add4f5e2f7d"
+            ]
+        ]
+    },
+    {
+        "id": "17e50d51453b44d3",
+        "type": "mysql",
+        "z": "b13dc9c6b0ef4a6f",
+        "mydb": "a14878b16f086ba1",
+        "name": "",
+        "x": 730,
+        "y": 1220,
+        "wires": [
+            [
+                "fd72115a0373bfb2"
+            ]
+        ]
+    },
+    {
+        "id": "72d3cafee9335c14",
+        "type": "mysql",
+        "z": "b13dc9c6b0ef4a6f",
+        "mydb": "a14878b16f086ba1",
+        "name": "",
+        "x": 730,
+        "y": 1040,
+        "wires": [
+            [
+                "5518508215a48dfb",
+                "b08d2f9371132adb"
+            ]
+        ]
+    },
+    {
+        "id": "525047fbfa8ddd6a",
+        "type": "mysql",
+        "z": "b13dc9c6b0ef4a6f",
+        "mydb": "a14878b16f086ba1",
+        "name": "",
+        "x": 710,
+        "y": 680,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "7e7ccb0c06edf292",
+        "type": "ui_spacer",
+        "z": "b13dc9c6b0ef4a6f",
+        "name": "spacer",
+        "group": "b3a823f37e86385f",
+        "order": 4,
+        "width": 10,
+        "height": 1
+    },
+    {
+        "id": "b83ee0a7537507ce",
+        "type": "ui_spacer",
+        "z": "b13dc9c6b0ef4a6f",
+        "name": "spacer",
+        "group": "b3a823f37e86385f",
+        "order": 12,
+        "width": 4,
+        "height": 1
+    },
+    {
+        "id": "04fe197e625dd375",
+        "type": "ui_spacer",
+        "z": "b13dc9c6b0ef4a6f",
+        "name": "spacer",
+        "group": "b3a823f37e86385f",
+        "order": 13,
+        "width": 4,
+        "height": 1
+    },
+    {
+        "id": "be1f4e07ac380fdb",
+        "type": "ui_spacer",
+        "z": "b13dc9c6b0ef4a6f",
+        "name": "spacer",
+        "group": "b3a823f37e86385f",
+        "order": 14,
+        "width": 4,
+        "height": 1
+    },
+    {
+        "id": "899beeb1931e42b3",
+        "type": "ui_spacer",
+        "z": "b13dc9c6b0ef4a6f",
+        "name": "spacer",
+        "group": "b3a823f37e86385f",
+        "order": 18,
+        "width": 6,
+        "height": 1
+    },
+    {
+        "id": "725df1361879c592",
+        "type": "ui_spacer",
+        "z": "b13dc9c6b0ef4a6f",
+        "name": "spacer",
+        "group": "b3a823f37e86385f",
+        "order": 20,
+        "width": 6,
+        "height": 1
+    },
+    {
+        "id": "cef3ea1683a64a1b",
+        "type": "ui_spacer",
+        "z": "b13dc9c6b0ef4a6f",
+        "name": "spacer",
+        "group": "bd722b8c547f9a61",
+        "order": 4,
+        "width": 2,
+        "height": 1
+    },
+    {
+        "id": "bc2125b90eb89bc3",
+        "type": "ui_spacer",
+        "z": "b13dc9c6b0ef4a6f",
+        "name": "spacer",
+        "group": "bd722b8c547f9a61",
+        "order": 6,
+        "width": 1,
+        "height": 1
+    },
+    {
+        "id": "891f7435c404b4ee",
+        "type": "ui_spacer",
+        "z": "b13dc9c6b0ef4a6f",
+        "name": "spacer",
+        "group": "bd722b8c547f9a61",
+        "order": 8,
+        "width": 1,
+        "height": 1
+    },
+    {
+        "id": "43055a3a6639b63b",
+        "type": "ui_spacer",
+        "z": "b13dc9c6b0ef4a6f",
+        "name": "spacer",
+        "group": "bd722b8c547f9a61",
+        "order": 15,
+        "width": 4,
+        "height": 1
+    },
+    {
+        "id": "eecd2ff90a8adf9f",
+        "type": "ui_spacer",
+        "z": "b13dc9c6b0ef4a6f",
+        "name": "spacer",
+        "group": "bd722b8c547f9a61",
+        "order": 17,
+        "width": 4,
+        "height": 1
+    },
+    {
+        "id": "2f14a5b304bb935c",
+        "type": "ui_spacer",
+        "z": "b13dc9c6b0ef4a6f",
+        "name": "spacer",
+        "group": "bd722b8c547f9a61",
+        "order": 18,
+        "width": 4,
+        "height": 1
+    },
+    {
+        "id": "78ec2c8b669d36fb",
+        "type": "ui_spacer",
+        "z": "b13dc9c6b0ef4a6f",
+        "name": "spacer",
+        "group": "bd722b8c547f9a61",
+        "order": 19,
+        "width": 4,
+        "height": 1
+    },
+    {
+        "id": "36d8bd9594a29481",
+        "type": "ui_spacer",
+        "z": "b13dc9c6b0ef4a6f",
+        "name": "spacer",
+        "group": "bd722b8c547f9a61",
+        "order": 25,
+        "width": 4,
+        "height": 1
+    },
+    {
+        "id": "ef196a2be1799110",
+        "type": "ui_spacer",
+        "z": "b13dc9c6b0ef4a6f",
+        "name": "spacer",
+        "group": "bd722b8c547f9a61",
+        "order": 27,
+        "width": 4,
+        "height": 1
+    },
+    {
+        "id": "b2f8c752de04dfe6",
+        "type": "ui_spacer",
+        "z": "b13dc9c6b0ef4a6f",
+        "name": "spacer",
+        "group": "bd722b8c547f9a61",
+        "order": 28,
+        "width": 4,
+        "height": 1
+    },
+    {
+        "id": "1ff0930b1f516cc4",
+        "type": "ui_spacer",
+        "z": "b13dc9c6b0ef4a6f",
+        "name": "spacer",
+        "group": "bd722b8c547f9a61",
+        "order": 29,
+        "width": 4,
+        "height": 1
+    },
+    {
+        "id": "348d19530ab08164",
+        "type": "ui_spacer",
+        "z": "b13dc9c6b0ef4a6f",
+        "name": "spacer",
+        "group": "bd722b8c547f9a61",
+        "order": 32,
+        "width": 6,
+        "height": 1
+    },
+    {
+        "id": "71739b4b0632a2e1",
+        "type": "ui_spacer",
+        "z": "b13dc9c6b0ef4a6f",
+        "name": "spacer",
+        "group": "bd722b8c547f9a61",
+        "order": 37,
+        "width": 2,
+        "height": 1
+    },
+    {
+        "id": "174ea83c6133bcc6",
+        "type": "ui_spacer",
+        "z": "b13dc9c6b0ef4a6f",
+        "name": "spacer",
+        "group": "bd722b8c547f9a61",
+        "order": 40,
+        "width": 2,
+        "height": 1
+    },
+    {
+        "id": "865ac9df859bef09",
+        "type": "ui_spacer",
+        "z": "b13dc9c6b0ef4a6f",
+        "name": "spacer",
+        "group": "bd722b8c547f9a61",
+        "order": 41,
+        "width": 2,
+        "height": 1
+    },
+    {
+        "id": "983034907ba3668f",
+        "type": "ui_spacer",
+        "z": "b13dc9c6b0ef4a6f",
+        "name": "spacer",
+        "group": "bd722b8c547f9a61",
+        "order": 42,
+        "width": 2,
+        "height": 1
+    },
+    {
+        "id": "4a2c7c66338bccdb",
+        "type": "ui_spacer",
+        "z": "b13dc9c6b0ef4a6f",
+        "name": "spacer",
+        "group": "bd722b8c547f9a61",
+        "order": 43,
+        "width": 2,
+        "height": 1
+    },
+    {
+        "id": "96de35ae7ee1a0fc",
+        "type": "s7 endpoint",
+        "transport": "iso-on-tcp",
+        "address": "192.168.120.72",
+        "port": "102",
+        "rack": "0",
+        "slot": "2",
+        "localtsaphi": "01",
+        "localtsaplo": "00",
+        "remotetsaphi": "01",
+        "remotetsaplo": "00",
+        "connmode": "rack-slot",
+        "adapter": "",
+        "busaddr": "2",
+        "cycletime": "500",
+        "timeout": "2000",
+        "name": "PLC LLC",
+        "vartable": [
+            {
+                "addr": "MR400",
+                "name": "LLC_SENSOR"
+            },
+            {
+                "addr": "M75.0",
+                "name": "LLC_VACUUM_ON"
+            },
+            {
+                "addr": "M1528.2",
+                "name": "LLC_VACUUM_OK"
+            },
+            {
+                "addr": "DB280,CHAR12.10",
+                "name": "LLC_VIN"
+            },
+            {
+                "addr": "DB280,CHAR8.4",
+                "name": "LLC_SEQ"
+            },
+            {
+                "addr": "MR1130",
+                "name": "LLC_TIME"
+            },
+            {
+                "addr": "M1528.3",
+                "name": "LLC_VACUUM_NG"
+            },
+            {
+                "addr": "DB280,R22",
+                "name": "LLC_END_VALUE"
+            },
+            {
+                "addr": "MW340",
+                "name": "LLC_CLOCK_TIME"
+            }
+        ]
+    },
+    {
+        "id": "a14878b16f086ba1",
+        "type": "MySQLdatabase",
+        "name": "LMS",
+        "host": "127.0.0.1",
+        "port": "3306",
+        "db": "lms_assy_admin",
+        "tz": "",
+        "charset": "UTF8"
+    },
+    {
+        "id": "b3a823f37e86385f",
+        "type": "ui_group",
+        "name": "Filling Machine - LLC",
+        "tab": "5cd14eac37e1e2d5",
+        "order": 2,
+        "disp": true,
+        "width": "30",
+        "collapse": false,
+        "className": ""
+    },
+    {
+        "id": "bd722b8c547f9a61",
+        "type": "ui_group",
+        "name": "Filling Machine - Break",
+        "tab": "0ffad0cc89a0c221",
+        "order": 1,
+        "disp": true,
+        "width": "30",
+        "collapse": false,
+        "className": ""
+    },
+    {
+        "id": "5cd14eac37e1e2d5",
+        "type": "ui_tab",
+        "name": "Filling Machine - LLC 5",
+        "icon": "dashboard",
+        "order": 2,
+        "disabled": false,
+        "hidden": false
+    },
+    {
+        "id": "0ffad0cc89a0c221",
+        "type": "ui_tab",
+        "name": "Filling Machine - Break",
+        "icon": "dashboard",
+        "order": 3,
+        "disabled": false,
+        "hidden": false
+    }
+]
